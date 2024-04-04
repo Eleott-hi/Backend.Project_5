@@ -1,15 +1,15 @@
 
 import asyncio
-from typing import Dict, List
-from fastapi import FastAPI
-from kafka import KafkaProducer
 import json
 import random
-import time
 import httpx
-from config import STORE_SERVICE, KAFKA_SERVICE
-from schemas import Product
 
+from typing import Dict, List
+from kafka import KafkaProducer
+from config import KAFKA_MSG_TIMER_SEC, STORE_SERVICE, KAFKA_SERVICE, KAFKA_ID
+from schemas import Product
+from aiokafka import AIOKafkaProducer
+from contextlib import suppress
 
 # Инициализация Kafka Producer
 producer = KafkaProducer(bootstrap_servers=KAFKA_SERVICE,
@@ -32,23 +32,35 @@ async def generate_event():
 
     if products:
         product: dict = random.choice(products)
-        product["price"] = random.uniform(0, 1000)
+        product["price"] = round(random.uniform(0, 1000), 2)
         product["available_stock"] = random.randint(0, 100)
         return product
 
 
+async def send_one_async(event):
+    try:
+        await producer.send_and_wait(KAFKA_ID, value=event)
+    finally:
+        await producer.stop()
+
+
 async def main():
-    while True:
-        try:
-            event = await generate_event()
 
-            if event is not None:
-                producer.send('product-events', value=event)
+    producer = AIOKafkaProducer(bootstrap_servers=KAFKA_SERVICE,
+                                value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+    await producer.start()
 
-        except Exception as e:
-            print(e)
+    try:
+        while True:
+            with suppress(Exception):
+                if event := await generate_event():
+                    print("SEND", event, flush=True)
+                    await producer.send_and_wait(KAFKA_ID, value=event)
 
-        await asyncio.sleep(5)
+            await asyncio.sleep(KAFKA_MSG_TIMER_SEC)
+    finally:
+        await producer.stop()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

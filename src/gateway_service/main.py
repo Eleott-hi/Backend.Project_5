@@ -1,97 +1,46 @@
-from typing import Annotated
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import asyncio
+from services.SSEManager import SSEManager
+from services.KafkaManager import KafkaManager
+from services.WebSocketManager import WebSocketManager
+from services.utils import update_db_callback
 
-from fastapi import (
-    Cookie,
-    Depends,
-    FastAPI,
-    Query,
-    WebSocket,
-    WebSocketException,
-    status,
+from routers.WebSocketRouter import router as ws_router
+from routers.SSERouter import router as sse_router
+
+sse_manager = SSEManager()
+ws_manager = WebSocketManager()
+consumer = KafkaManager()
+
+
+async def lifespan(app: FastAPI):
+    consumer.add_callback(update_db_callback)
+    consumer.add_callback(ws_manager.send_message_callback)
+    consumer.add_callback(sse_manager.append_data)
+
+    asyncio.create_task(consumer.consume_async())
+
+    yield
+
+
+app = FastAPI(
+    lifespan=lifespan,
 )
-from fastapi.responses import HTMLResponse
 
-app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-html = """
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Chat</title>
-    </head>
-    <body>
-        <h1>WebSocket Chat</h1>
-        <form action="" onsubmit="sendMessage(event)">
-            <label>Item ID: <input type="text" id="itemId" autocomplete="off" value="foo"/></label>
-            <label>Token: <input type="text" id="token" autocomplete="off" value="some-key-token"/></label>
-            <button onclick="connect(event)">Connect</button>
-            <hr>
-            <label>Message: <input type="text" id="messageText" autocomplete="off"/></label>
-            <button>Send</button>
-        </form>
-        <ul id='messages'>
-        </ul>
-        <script>
-        var ws = null;
-        function connect(event) {
-                var itemId = document.getElementById("itemId")
-                var token = document.getElementById("token")
-                ws = new WebSocket("ws://localhost:8001/items/" + itemId.value + "/ws?token=" + token.value);
-                ws.onmessage = function(event) {
-                    var messages = document.getElementById('messages')
-                    var message = document.createElement('li')
-                    var content = document.createTextNode(event.data)
-                    message.appendChild(content)
-                    messages.appendChild(message)
-                };
-                event.preventDefault()
-            }
-        function sendMessage(event) {
-                var input = document.getElementById("messageText")
-                ws.send(input.value)
-                input.value = ''
-                event.preventDefault()
-            }
-        </script>
-    </body>
-</html>
-"""
+app.include_router(ws_router)
+app.include_router(sse_router)
 
 
-@app.get("/")
-async def get():
-    return HTMLResponse(html)
-
-
-async def get_cookie_or_token(
-    websocket: WebSocket,
-    session: Annotated[str | None, Cookie()] = None,
-    token: Annotated[str | None, Query()] = None,
-):
-    print("HERE")
-    if session is None and token is None:
-        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
-    return session or token
-
-
-@app.websocket("/items/{item_id}/ws")
-async def websocket_endpoint(
-    websocket: WebSocket,
-    item_id: str,
-    cookie_or_token: Annotated[str, Depends(get_cookie_or_token)],
-    q: int | None = None,
-):
-    await websocket.accept()
-    while True:
-        data = await websocket.receive_text()
-        await websocket.send_text(
-            f"Session cookie or query token value is: {cookie_or_token}"
-        )
-        if q is not None:
-            await websocket.send_text(f"Query parameter q is: {q}")
-        await websocket.send_text(f"Message text was: {data}, for item ID: {item_id}")
-
-
+# Run the app
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
