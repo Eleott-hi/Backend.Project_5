@@ -18,7 +18,6 @@ async def lifespan(app: FastAPI):
     consumer.add_callback(update_db_callback)
     consumer.add_callback(ws_manager.send_message_callback)
     consumer.add_callback(sse_manager.append_data)
-
     asyncio.create_task(consumer.consume_async())
 
     yield
