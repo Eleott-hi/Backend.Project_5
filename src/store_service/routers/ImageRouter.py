@@ -9,7 +9,7 @@ class ImageRouter():
         self.router = APIRouter(
             prefix="/images",
             tags=["Image"],
-            dependencies=[Depends(JWTBearer())]
+            # dependencies=[Depends(JWTBearer())]
         )
         self.service = service
 

@@ -15,7 +15,7 @@ class IImageRepository(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def create(image: Image, product_id: UUID) -> UUID:
+    async def create(image: Image, product_id: UUID) -> Image:
         raise NotImplementedError
 
     @abc.abstractmethod

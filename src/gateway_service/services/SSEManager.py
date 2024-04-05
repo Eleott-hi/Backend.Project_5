@@ -10,25 +10,18 @@ from singleton_decorator import singleton
 class SSEManager():
 
     def __init__(self):
-        self.buffer: Deque = deque()
-
-    def append_data(self, data):
-        self.buffer.append(data)
-
-    async def streaming(self):
-        data = (
+        self.data = (
             "event: product_update\n"
             f"data: None\n\n"
         )
 
+    def update_data(self, data):
+        self.data = (
+            "event: product_update\n"
+            f"data: {json.dumps(data)}\n\n"
+        )
+
+    async def streaming(self):
         while True:
-            if self.buffer:
-                data = self.buffer.popleft()
-                data = (
-                    "event: product_update\n"
-                    f"data: {json.dumps(data)}\n\n"
-                )
-
-            yield data
-
+            yield self.data
             await asyncio.sleep(0.1)

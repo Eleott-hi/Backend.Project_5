@@ -17,7 +17,7 @@ consumer = KafkaManager()
 async def lifespan(app: FastAPI):
     consumer.add_callback(update_db_callback)
     consumer.add_callback(ws_manager.send_message_callback)
-    consumer.add_callback(sse_manager.append_data)
+    consumer.add_callback(sse_manager.update_data)
     asyncio.create_task(consumer.consume_async())
 
     yield

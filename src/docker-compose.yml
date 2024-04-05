@@ -50,12 +50,12 @@ services:
   # #   ports:
   # #     - 5050:5050
 
-  adminer:
-    image: adminer
-    container_name: adminer
-    restart: on-failure
-    ports:
-      - 8080:8080
+  # adminer:
+  #   image: adminer
+  #   container_name: adminer
+  #   restart: on-failure
+  #   ports:
+  #     - 8080:8080
 
   auth_service:
     build: ./auth_service
@@ -84,8 +84,6 @@ services:
     ports:
       - 8000:8000
 
-
-
   # store_service_2:
   #   container_name: store_service_2
   #   extends:
@@ -99,7 +97,6 @@ services:
   #   container_name: store_service_3
   #   extends:
   #     service: store_service_2
-
 
   generator_service:
     build: ./generator_service

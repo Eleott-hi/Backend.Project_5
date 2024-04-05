@@ -25,7 +25,7 @@ class ImageRepository(IImageRepository):
 
             return product.image.image
 
-    async def create(self, image: Image, product_id: UUID) -> UUID:
+    async def create(self, image: Image, product_id: UUID) -> Image:
         with Session(engine) as session:
             product = self.__get_or_404(
                 Product, product_id, "Product not found", session=session
@@ -36,7 +36,7 @@ class ImageRepository(IImageRepository):
             session.commit()
             session.refresh(image)
 
-            return image.id
+            return image
 
     async def update(self, id: UUID, image_info: bytes) -> Image:
         with Session(engine) as session:

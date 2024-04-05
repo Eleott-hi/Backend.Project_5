@@ -10,3 +10,4 @@ phonenumbers
 opyoid
 grpcio 
 grpcio-tools
+redis
