@@ -39,6 +39,18 @@ services:
     ports:
       - 9092:9092
 
+
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      REDIS_HOST: redis_service
+    depends_on:
+      - redis_service
+    ports:
+      - 8081:8081
+
   # # pgadmin:
   # #   image: dpage/pgadmin4
   # #   container_name: pgadmin
