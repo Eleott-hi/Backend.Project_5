@@ -1,4 +1,3 @@
-
 import asyncio
 from collections import deque
 import json
@@ -7,21 +6,17 @@ from singleton_decorator import singleton
 
 
 @singleton
-class SSEManager():
+class SSEManager:
 
     def __init__(self):
-        self.data = (
-            "event: product_update\n"
-            f"data: None\n\n"
-        )
+        self.data = None
 
     def update_data(self, data):
-        self.data = (
-            "event: product_update\n"
-            f"data: {json.dumps(data)}\n\n"
-        )
+        self.data = "event: product_update\n" f"data: {json.dumps(data)}\n\n"
 
     async def streaming(self):
         while True:
-            yield self.data
+            if self.data:
+                yield self.data
+                self.data = None
             await asyncio.sleep(0.1)
